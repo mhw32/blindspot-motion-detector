@@ -1,0 +1,13 @@
+obj=mmreader('Video.avi');
+a=read(obj);
+frames=get(obj,'numberOfFrames');
+for k = 1 : 30
+I(k).cdata = a(:,:,:,k);
+I(k).colormap = [];
+j=k+1;
+I(j).cdata=a(:,:,:,k);
+I(j).colormap=[];
+HS(de,ce, sde, 
+end
+implay(I);
+

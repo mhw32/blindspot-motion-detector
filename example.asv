@@ -1,0 +1,12 @@
+x=[1 3 5 7 9]; 
+y1=[10 25 90 35 16]; 
+
+
+bar1=bar(x, y1, 'FaceColor', 'b', 'EdgeColor', 'b'); 
+set(bar1,'BarWidth',0); 
+hold on;
+y2=[7 38 31 50 41];
+bar2=bar(x, y2, 'FaceColor', 'r', 'EdgeColor', 'r');
+set(bar2,'BarWidth',K/2); 
+hold off; 
+legend('series1','series2')

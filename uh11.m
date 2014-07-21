@@ -1,0 +1,392 @@
+%---uh11---installing memory unit
+obj=mmreader('01934short.avi');
+a=read(obj);
+frames=get(obj,'numberOfFrames');
+d1=figure('PaperSize',[600 600],'visible','off');
+scrsz = get(0,'ScreenSize');% retrieve screensize of computer
+d3=figure('Position',[1 1 scrsz(3)/.82 scrsz(4)/1],'visible','off');%create the position and size of figure d3
+winsize = get(d3,'Position');%initiate winsize, which will determine the position and size of the movie,
+winsize(1:2) = [0 0]; %adjust size of window to include whole figure window
+A=moviein(frames,d3,winsize);%create movie matrix A
+values=0; %intiate the values variable
+velocityone=3;
+veloctiytwo=3;
+xx=zeros(1,frames-1);
+countit=0;
+for tony=1:frames-1
+    xx(1,tony)=tony;
+end
+yy=zeros(1,frames-1);%velocity values stored here
+zz=zeros(1,frames-1);%acceleration values stored here
+zz(1,1)=0;
+im1 = a(:,:,:,1);
+Height=size(im1(:,1,1),1);
+Length=size(im1(1,:,1),2);
+Area=Height*Length;
+x=zeros(1,Area);
+y=zeros(1,Area);
+for i = 1:Length
+ for j= 1:Height
+     x(1,(Height.*(i-1)+j ))=i;
+y(1,(Height.*(i-1)+j ))= j;
+end
+end
+anglebisector=-0.9435*pi;
+InitialAngleRange=pi/4;
+accelerationcounter=0;
+
+if anglebisector<-pi+InitialAngleRange
+    anglebisector=anglebisector+2*pi;
+end
+for k=1 %loop
+    if rem(k+3,5)==0
+        countit=countit+1
+        continue;
+    end
+%     
+im1 = a(:,:,:,k);
+im2=a(:,:,:,k+1);
+[u,v]=HS(im1,im2);
+displayImg=im1;
+%--------------create first image (video with vectors)--------------------------------------------
+
+
+d1=figure('visible','off','PaperSize',[600 600]); 
+
+set(d1,'Position',[scrsz(3)/3.5 scrsz(4)/3 scrsz(3)/1.75 scrsz(4)/1.75],'Menubar','none');
+
+subplot('position',[0.58,0.05,0.39,.68]);
+if sum(sum(displayImg))~=0
+        imshow(displayImg,[0 255]);
+        hold on;% holds image onto figure d1, so that the next image(in this case, the vector arrows) does
+        %not replace the image
+    end
+
+
+    rSize=5;
+
+
+  
+
+
+% Enhance the quiver plot visually by showing one vector per region
+for i=1:size(u,1)
+    for j=1:size(u,2)
+        if floor(i/rSize)~=i/rSize || floor(j/rSize)~=j/rSize
+            u(i,j)=0;
+            v(i,j)=0;
+        end
+    end
+end
+u=reshape(u,[1,Area]);
+v=reshape(v,[1,Area]);
+
+arrowlength=sqrt(u.^2+v.^2);
+ %a matrice, size based on #of non-zero arrows, indices contains the indice number of non-zero indices 
+arrowlengthsquareit=arrowlength(arrowlength~=0); %returns the vector's magnitude of non-zero indices
+findthreshold=sort(arrowlengthsquareit,'descend');%sort from BIGGEST, vector magnitudes
+threshold=findthreshold(1,floor(size(arrowlengthsquareit(1,:),2)/2));%take the value at the 50th percentile for all possible vectors, and sets it as THRESHOLD
+
+validarrows=arrowlength>threshold;
+AverageMagnitude=mean(arrowlength(validarrows));
+
+s=std(validarrows);
+
+johnny=atan2(-v,u);%contains the angle of the vectors from the interval [-pi, pi]
+%johnny contains the angle of the vectors, but the interval can be changed.
+  %initialize variable desiredangle with value of 1.05pi. Used to determine angle direction that will be measured
+
+if  anglebisector<-pi+InitialAngleRange || anglebisector>pi-InitialAngleRange % if anglebisector>7pi/4, that means values greater than 2pi will be evaluated. These values are basically
+    %the first quartile(NE). to make these values evaluated, add 2pi to those values, as seen in line 200. 
+    %transporse interval if necessary
+    
+        if anglebisector>pi-InitialAngleRange
+            anglebisector=anglebisector-2*pi;
+        end
+        joy=find(johnny<anglebisector+InitialAngleRange);
+    for yikes = 1: size(joy(1,:),2)
+            johnny(1,joy(1,yikes))=johnny(1,joy(1,yikes))+2*pi; %transposes interval
+        
+    end
+end
+if anglebisector<-pi+InitialAngleRange
+    anglebisector=anglebisector+2*pi;%convert angle back to higher angle
+end
+UpperInitialRange=anglebisector+InitialAngleRange;
+LowerInitialRange=anglebisector-InitialAngleRange;
+joseph=(arrowlength>threshold & johnny>LowerInitialRange & johnny<UpperInitialRange);% find indice values containing all the car vectors
+alltheangles=johnny(joseph);%gets the actual angles of the car vectors
+RevisedAngleRange=std(alltheangles);%get the standard deviation
+CarVectors=find(arrowlength>threshold & johnny>LowerInitialRange & johnny<UpperInitialRange); %stores indices values'
+BackGroundVectors=find( johnny<LowerInitialRange &arrowlength>threshold | johnny>UpperInitialRange & arrowlength>threshold);%stores indices values'
+
+thetally=2;
+   while size(CarVectors(1,:),2)+size(BackGroundVectors(1,:),2)>5000%if there are more than 5000 arrows 
+    
+threshold=findthreshold(1,floor(size(arrowlengthsquareit(1,:),2)/(4*(thetally-1))));%take the 75%biggest and set it as the THRESHOLD so that less arrows appear
+CarVectors=find(arrowlength>threshold & johnny>LowerInitialRange & johnny<UpperInitialRange); %stores indices values'
+BackGroundVectors=find(johnny<LowerInitialRange &arrowlength>threshold | johnny>UpperInitialRange & arrowlength>threshold);%stores indices values'
+ thetally=thetally+2  
+ validarrows=arrowlength>threshold;
+AverageMagnitude=mean(arrowlength(validarrows));
+
+s=std(validarrows);
+
+   end
+   UpperRevisedRange=anglebisector+RevisedAngleRange;
+   LowerRevisedRange=anglebisector-RevisedAngleRange;
+carvectorstwo=find(arrowlength>threshold & johnny> LowerRevisedRange & johnny< UpperRevisedRange);
+    
+   %-----start of determining initial box location code------------------------------------------
+presence=0;
+
+
+if size(CarVectors(1,:),2)/size(BackGroundVectors(1,:),2)>0.1
+    presence=1;
+    
+    D=reshape(arrowlength,[Height,Length]);
+thewhy=reshape(johnny,[Height,Length]);
+indices=find(D>threshold & thewhy>3*pi/4);
+horizontal=ceil(indices/Height);
+horizontalcenter=floor(sum(horizontal)'/size(horizontal)');
+vertical=ceil(rem(indices+Height,Height));
+verticalcenter=floor(sum(vertical)'/size(vertical)');
+
+       
+%-----end of determining initial box location
+%code--------------------------------------------
+   
+%--------------------start-determine SIZE of box-----------------
+HorizontalParameter=floor(Length*size(CarVectors(1,:),2)/size(BackGroundVectors(1,:),2)/2);
+if size(CarVectors(1,:),2)/size(BackGroundVectors(1,:),2)>0.4
+    HorizontalParameter=floor(Length*0.4);
+end
+
+VerticalParameter=floor(Height*size(CarVectors(1,:),2)/size(BackGroundVectors(1,:),2)/2);
+ 
+if size(CarVectors(1,:),2)/size(BackGroundVectors(1,:),2)>0.4
+    VerticalParameter=floor(Height*0.4);
+end
+%-----------------------end-determine SIZE of box-----------------------
+
+
+
+%---start--make box location more accurate ---
+for SDunit=1:5
+LeftBorder=floor(horizontalcenter(:,1)-HorizontalParameter*(6-SDunit));%4 standard deviations from box
+RightBorder=floor(horizontalcenter(:,1)+HorizontalParameter*(6-SDunit));
+TopBorder=floor(verticalcenter(:,1)-VerticalParameter*(6-SDunit));
+BottomBorder=floor(verticalcenter(:,1)+VerticalParameter*(6-SDunit));
+if LeftBorder<1
+    LeftBorder=1;
+end
+if RightBorder>Length
+    RightBorder=Length;
+end
+if TopBorder<1
+    TopBorder=1;
+end
+if BottomBorder>Height
+    BottomBorder=Height;
+end
+%--start--eliminate outliers
+
+     %--end--eliminate outliers-----------
+     
+%--remake box center-------------------------------------------
+
+
+
+C=zeros(Height,Length);
+
+C(TopBorder:BottomBorder,LeftBorder:RightBorder)=2;
+%calculate box center
+
+indices=find(D>threshold & thewhy<UpperRevisedRange &thewhy>LowerRevisedRange & C==2);
+if size(indices)>0
+horizontal=ceil(indices/Height);
+horizontalcenter=floor(sum(horizontal)'/size(horizontal)');
+vertical=ceil(rem(indices+Height,Height));
+verticalcenter=floor(sum(vertical)'/size(vertical)');
+
+end
+end
+%--end--remake box center first time---
+%---end---make box location more accurate 1---
+
+
+if(presence )
+Box=zeros(1,Area);
+
+
+
+    %---start-check if box fits in picture---
+   if horizontalcenter-HorizontalParameter<1 
+       LeftBorder=1; end%what if parameters of box are out of range? default to a box hugging
+    %the side of the frame
+    if horizontalcenter+HorizontalParameter>Length
+        RightBorder=Length; end
+        if verticalcenter-VerticalParameter<1
+            TopBorder=1; end
+        if verticalcenter+VerticalParameter>Height
+            BottomBorder=Height;end
+    %---end-check if box fits in picture
+    
+    %---start--check if box is valid...and if car is actually present
+C=zeros(Height,Length);
+C(TopBorder:BottomBorder,LeftBorder:RightBorder)=2;
+
+something= find(thewhy>LowerRevisedRange &  thewhy<UpperRevisedRange &C==2       & D>threshold);
+presenceTestTwo=size(something);
+
+
+     %---end--check if box is valid...and if car is actually present
+    Isthereabox=0;
+    if presenceTestTwo(:,1)>size(carvectorstwo(1,:),2)/3%if # car vectors in box is not even 1/5 of total car vectors, we can assume that a car isn't in the picture
+        Isthereabox=1;
+    end
+    %make vertical sides of box
+for kimchi=LeftBorder:RightBorder-LeftBorder:RightBorder%horizontal 
+   for kimmy=TopBorder:BottomBorder%vertical
+Box(1,Height*(kimchi-1)+ kimmy)=2;
+u(1,Height*(kimchi-1)+ kimmy)=2;
+v(1,Height*(kimchi-1)+ kimmy)=2;
+
+   end
+end
+%make horizontal sides of box
+for kimchi=LeftBorder:RightBorder%horizontal 
+   for kimmy=TopBorder:BottomBorder-TopBorder:BottomBorder%vertical
+Box(1,Height*(kimchi-1)+ kimmy)=2;
+u(1,Height*(kimchi-1)+ kimmy)=2;
+v(1,Height*(kimchi-1)+ kimmy)=2;
+
+   end
+end
+
+%----------------end of box code--------------
+testvectors=find(   Box~=0  );
+end%end of statement if a box radius was found
+end
+quiver(x(carvectorstwo), y(carvectorstwo),u(carvectorstwo),v(carvectorstwo),0, 'color', 'g', 'linewidth', 2);
+
+%quiver(x(CarVectors), y(CarVectors),u(CarVectors),v(CarVectors),0, 'color', 'g', 'linewidth', 2);
+quiver(x(BackGroundVectors),y(BackGroundVectors),u(BackGroundVectors),v(BackGroundVectors),0, 'color', 'r', 'linewidth', 2);
+if(presence && Isthereabox)
+quiver(x(testvectors),y(testvectors),u(testvectors),v(testvectors),0,'color','c','linewidth',2);
+end
+% 0 = won't autoscale to biggest arrow
+
+
+
+
+%--------------------end of video(withvectors)----------------------------------------%
+%-------------start construction of rose plot-----------------------------------------%
+
+
+
+
+
+backgroundfrequency=  johnny(johnny<LowerRevisedRange &arrowlength>threshold... %&  (arrowlength-AverageMagnitude)/s<3 ...
+    | johnny>UpperRevisedRange & arrowlength>threshold);% &  (arrowlength-AverageMagnitude)/s<3);%background
+carfrequency= johnny(arrowlength>threshold &  johnny>LowerRevisedRange & johnny<UpperRevisedRange); % &  (arrowlength-AverageMagnitude)/s<3);
+backgroundfrequencysize=size(backgroundfrequency(1,:),2);
+carfrequencysize=size(carfrequency(1,:),2);
+
+
+
+
+hax = axes('Position', [-0.073, 0, .75, .75]);
+
+
+
+if   backgroundfrequencysize*3>carfrequencysize || backgroundfrequencysize*3==carfrequencysize
+h=rose(backgroundfrequency, 30); 
+xd = get(h, 'XData') ;
+yd = get(h, 'YData') ;
+p = patch(xd, yd, 'r','EdgeColor',[1 1 0]) ;
+hold on;
+hg=rose(carfrequency,30);
+xy = get(hg, 'XData') ;
+yz = get(hg, 'YData') ;
+pt = patch(xy, yz, 'g','EdgeColor','b') ;
+
+
+hold off;
+elseif backgroundfrequencysize*3<carfrequencysize
+hg=rose(hax,carfrequency,30);
+xy = get(hg, 'XData') ;
+yz = get(hg, 'YData') ;
+pt = patch(xy, yz, 'g','EdgeColor','b') ;
+hold on;
+h=rose(hax,backgroundfrequency, 30);
+xd = get(h, 'XData') ;
+yd = get(h, 'YData') ;
+p = patch(xd, yd, 'r','EdgeColor',[1 1 0]) ;
+hold off;
+end
+%---end construction of rose plot===
+   A(k-countit).cdata=imcapture(d1);
+   capturescreen
+
+if(presence)
+joey=find(thewhy<UpperRevisedRange & thewhy>LowerRevisedRange & C==2);%matrice containing index of car vectors in johnny
+if size(joey(:,:),1)~=0
+tally=size(joey(1,:),2);%# of car vectors
+
+grrr=arrowlength(1,joey);
+total=sum(grrr);
+
+vectoraverage=total/tally; %average vector in certain direction
+
+elseif size(joey(:,:),1)==0
+    vectoraverage=0;
+end
+pixels=vectoraverage*9/10; %convert vectorlength to pixels
+%window length (bottom portion of closest left car window) has 75 pixels, it is 81.3 cm.
+actuallength=pixels*81.3/75; %converts from pixels to centimeters
+actuallength=actuallength/2.54;%convert from centimeters to inches
+actuallength=actuallength/12;%convert from inches to feet
+actuallength=actuallength/5280;%convert from feet to mile
+if rem(k+2-countit,2)==0
+velocitytwo=actuallength*get(obj,'FrameRate')*3600;%convert from framerate units to hours;
+   yy(1,k-countit)=velocitytwo;
+acceleration=(velocitytwo-velocityone)*get(obj,'FrameRate')*3600;
+
+zz(1,k-1-countit)=acceleration;
+
+elseif rem(k+2-countit,2)==1
+     velocityone=actuallength*get(obj,'FrameRate')*3600;
+        yy(1,k-countit)=velocityone;
+     if k==1
+continue;
+     end
+acceleration=(velocityone-velocitytwo)*get(obj,'FrameRate')*3600;
+zz(1,k-1-countit)=acceleration;
+
+
+end
+end
+capturescreen
+end%stop for loop
+%plotvelocity=figure();
+%plot(xx,yy)
+
+%plotacceleration=figure();
+%plot(xx,zz)
+
+%moviefigure=figure();
+%set(moviefigure,'Position',[scrsz(3)/16 scrsz(4)/18 scrsz(3)/0.82 scrsz(4)/1.1],'Menubar','none')
+%movie(moviefigure,A,30,3,winsize)
+
+if k>9000
+
+triforce=figure();
+scrsz = get(0,'ScreenSize');% retrieve screensize of computer
+set(triforce,'Position',[scrsz(3)/18 scrsz(4)/17 scrsz(3)/0.88 scrsz(4)/1.15],'Menubar','none')
+d3=figure('Position',[scrsz(3)/7 scrsz(4)/7 scrsz(3)/2 scrsz(4)/2]);%create the position and size of figure d3
+winsize = get(d3,'Position');%initiate winsize, which will determine the position and size of the movie,
+winsize(1:2) = [0 0]; %adjust size of window to include whole figure window
+movie(triforce,A,30,3,winsize)
+
+end
